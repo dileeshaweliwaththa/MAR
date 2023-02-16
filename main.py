@@ -2,7 +2,6 @@ import cv2
 import dlib
 import numpy as np
 
-
 # Load the shape predictor 68 dat file
 predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
 
@@ -11,6 +10,11 @@ detector = dlib.get_frontal_face_detector()
 
 # Load the webcam
 cap = cv2.VideoCapture(0)
+
+MOUTH_AR_THRESH = 0.35
+MOUTH_AR_CONSEC_FRAMES = 12
+COUNTER = 0
+
 
 def mouth_aspect_ratio(points):
     # Compute the euclidean distances between the horizontal mouth landmarks
@@ -48,6 +52,7 @@ while True:
 
         # Compute the mouth aspect ratio
         mar = mouth_aspect_ratio(mouth)
+        cv2.putText(frame, f"COUNTER: {COUNTER}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
         # Draw the mouth landmarks on the frame
         for point in mouth:
@@ -58,12 +63,19 @@ while True:
                         0.7, (0, 0, 255), 2)
 
         # Check if the MAR is below a threshold
-        if mar > 0.4:
-            cv2.putText(frame, 'DROWSINESS ALERT!', (10, 70),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+        if mar > MOUTH_AR_THRESH:
+            COUNTER += 1
+
+            if COUNTER >= MOUTH_AR_CONSEC_FRAMES:
+                cv2.putText(frame, 'DROWSINESS ALERT!', (10, 90),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+
+        else:
+            # Reset the eye frame counter
+            COUNTER = 0
 
     # Display the frame
-    cv2.imshow('Frame', frame)
+    cv2.imshow('MAR', frame)
 
     # Break the loop if the 'q' key is pressed
     if cv2.waitKey(1) & 0xFF == ord('q'):
